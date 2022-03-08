@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -11,10 +10,10 @@
 
 namespace xoshiro256starstar {
 struct seed_from_urbg_t {};
-
 inline constexpr seed_from_urbg_t seed_from_urbg{};
+inline constexpr std::size_t state_byte_size = 4 * sizeof(std::uint64_t);
 
-struct alignas(32) xoshiro256starstar {
+struct alignas(state_byte_size) xoshiro256starstar {
   using result_type = std::uint64_t;
 
   static constexpr auto min() {
@@ -33,7 +32,8 @@ struct alignas(32) xoshiro256starstar {
       std::uniform_random_bit_generator<std::remove_cvref_t<T>>;
   explicit xoshiro256starstar();
   explicit xoshiro256starstar(std::uint64_t seed);
-  explicit xoshiro256starstar(const std::array<std::byte, 256> &seed);
+  explicit xoshiro256starstar(std::uint64_t seed0, std::uint64_t seed1,
+                              std::uint64_t seed2, std::uint64_t seed3);
 
   // Jump functions
   xoshiro256starstar jump();
@@ -90,9 +90,14 @@ inline constexpr std::uint64_t xoshiro256starstar::operator()() {
   return result;
 }
 
-inline xoshiro256starstar::xoshiro256starstar(
-    const std::array<std::byte, 256> &seed) {
-  std::memcpy(m_state, &seed, sizeof m_state);
+inline xoshiro256starstar::xoshiro256starstar(std::uint64_t seed0,
+                                              std::uint64_t seed1,
+                                              std::uint64_t seed2,
+                                              std::uint64_t seed3) {
+  m_state[0] = seed0;
+  m_state[1] = seed1;
+  m_state[2] = seed2;
+  m_state[3] = seed3;
 }
 
 inline xoshiro256starstar::xoshiro256starstar(std::uint64_t seed) {

@@ -8,40 +8,40 @@
 
 const std::array<uint64_t, 4> expected_sequences[]{
     {
-        13346302149916581598ull,
-        3458137911937826359ull,
-        15013289007574211850ull,
-        862047879559611952ull,
+        13441579124568109284ull,
+        16706691377286368614ull,
+        6044645330207567355ull,
+        1028949623841091013ull,
+    },
+    {
+        12156030441243319403ull,
+        15440195002139279164ull,
+        621127951814214240ull,
+        12743354370792161826ull,
+    },
+    {
+        15891181023933456327ull,
+        17338517592901170603ull,
+        6477423152056636265ull,
+        5845344969495837556ull,
+    },
+    {
+        15098849909276232933ull,
+        3979698662854242369ull,
+        15367718349835638978ull,
+        12310398284360036637ull,
+    },
+    {
+        17233280674010829842ull,
+        2397106501455141870ull,
+        4812098391647980233ull,
+        13206288874623648473ull,
     },
     {
         12247022307613036767ull,
         6189883159010878364ull,
         12250510543705388769ull,
         15376822593055763089ull,
-    },
-    {
-        11920099415707066346ull,
-        14422800180009765440ull,
-        11058914709412537623ull,
-        3686108977655562628ull,
-    },
-    {
-        14646694691296698890ull,
-        15099502338332193061ull,
-        12418408594807792822ull,
-        1546099311609212045ull,
-    },
-    {
-        8965407117812691042ull,
-        6229718707537460892ull,
-        17965388879194096341ull,
-        2509736941055013603ull,
-    },
-    {
-        561345601117264966ull,
-        15261714419321652613ull,
-        12890482397767998458ull,
-        14696349688785942750ull,
     },
 };
 
@@ -71,25 +71,19 @@ auto sub_test(auto sequence_number, auto &&generator) {
 int main() {
   using urbg = xoshiro256starstar::xoshiro256starstar;
   using xoshiro256starstar::seed_from_urbg;
+  using xoshiro256starstar::state_byte_size;
 
-  auto generator0 = urbg{0xdeadbeeffeedbadbull};
+  auto generator0 = urbg{
+      0xdeadbeeffeedbadbull,
+      0xbadfacedbeedeadfull,
+      0xdadaddedbaddeedcull,
+      0xdecadefadedfacedull,
+  };
+
   auto generator1 = generator0.long_jump();
   auto generator2 = generator0.jump();
   auto generator3 = urbg{seed_from_urbg, generator0};
   auto generator4 = generator0;
-
-  const char(&seed_string)[256] =
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
-      "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut e"
-      "nim ad minim veniam, quis nostrud exercitation ullamco laboris n"
-      "isi ut aliquip ex ea commodo consequat. Duis aute irure dolor i";
-
-#if __cpp_lib_bit_cast >= 201806L
-  auto seed = std::bit_cast<std::array<std::byte, 256>>(seed_string);
-#else
-  std::array<std::byte, 256> seed;
-  std::memcpy(&seed, seed_string, sizeof seed);
-#endif
 
   return !std::ranges::all_of(
       std::array{
@@ -99,7 +93,7 @@ int main() {
           sub_test(3, generator3),
           sub_test(0, generator4),
           sub_test(4, generator4),
-          sub_test(5, urbg{seed}),
+          sub_test(5, urbg{0xdeadbeeffeedbadbull}),
       },
       [](auto ok) { return ok; });
 }

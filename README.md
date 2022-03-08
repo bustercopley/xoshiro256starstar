@@ -42,16 +42,17 @@ auto generator1 = urbg{seed_from_urbg, std::random_device{}};
 // Default constructor, same as urbg{seed_from_urbg, std::random_device{}}
 auto generator2 = urbg{};
 
-// Seed a splitmix64 generator with a given 64 given bit seed
-// and use it to fill the 256-bit xoshiro256** seed
+// Seed a splitmix64 generator with a given 64-bit seed and use it to fill
+// the 256-bit xoshiro256** seed
 auto generator2 = urbg{0xdeadbeeffeedbadbull};
 
 // Provide a full 256-bit seed, which must not be everywhere zero
-auto generator3 = urbg{std::bit_cast<std::array<std::byte, 256>>(
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
-    "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut e"
-    "nim ad minim veniam, quis nostrud exercitation ullamco laboris n"
-    "isi ut aliquip ex ea commodo consequat. Duis aute irure dolor i")};
+auto generator3 = urbg{
+    0xdeadbeeffeedbadbull,
+    0xbadfacedbeedeadfull,
+    0xdadaddedbaddeedcull,
+    0xdecadefadedfacedull,
+};
 
 // Copyable (both generators will produce the same sequence)
 auto generator4 = generator3;
