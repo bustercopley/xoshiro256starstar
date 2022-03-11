@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concepts>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -11,52 +11,54 @@
 namespace xoshiro256starstar {
 struct seed_from_urbg_t {};
 inline constexpr seed_from_urbg_t seed_from_urbg{};
-inline constexpr std::size_t state_byte_size = 4 * sizeof(std::uint64_t);
 
-struct alignas(state_byte_size) xoshiro256starstar {
+struct alignas(4 * sizeof(std::uint64_t)) xoshiro256starstar {
   using result_type = std::uint64_t;
 
-  static constexpr auto min() {
+  static constexpr auto min() noexcept {
     return std::numeric_limits<std::uint64_t>::min();
   }
 
-  static constexpr auto max() {
+  static constexpr auto max() noexcept {
     return std::numeric_limits<std::uint64_t>::max();
   }
 
-  inline constexpr std::uint64_t operator()();
+  constexpr std::uint64_t operator()() noexcept;
 
   // Constructors
   template <typename T>
-  xoshiro256starstar(seed_from_urbg_t, T &&other_urbg) requires
-      std::uniform_random_bit_generator<std::remove_cvref_t<T>>;
+  explicit constexpr xoshiro256starstar(seed_from_urbg_t,
+                                        T &&other_urbg) noexcept;
   explicit xoshiro256starstar();
-  explicit xoshiro256starstar(std::uint64_t seed);
-  explicit xoshiro256starstar(std::uint64_t seed0, std::uint64_t seed1,
-                              std::uint64_t seed2, std::uint64_t seed3);
+  explicit constexpr xoshiro256starstar(std::uint64_t seed0,
+                                        std::uint64_t seed1,
+                                        std::uint64_t seed2,
+                                        std::uint64_t seed3) noexcept;
+  explicit constexpr xoshiro256starstar(std::uint64_t seed) noexcept;
 
   // Jump functions
-  xoshiro256starstar jump();
-  xoshiro256starstar long_jump();
+  constexpr xoshiro256starstar jump() noexcept;
+  constexpr xoshiro256starstar long_jump() noexcept;
 
 private:
   std::uint64_t m_state[4];
 };
 
 namespace detail {
-inline constexpr auto rotl(const std::uint64_t x, unsigned k) {
+constexpr inline auto rotl(const std::uint64_t x, unsigned k) noexcept {
   return (x << k) | (x >> (64u - k));
 }
 
-inline auto splitmix64(std::uint64_t &x) {
+constexpr inline auto splitmix64(std::uint64_t &x) noexcept {
   std::uint64_t z = (x += 0x9e3779b97f4a7c15ull);
   z = (z ^ (z >> 30u)) * 0xbf58476d1ce4e5b9ull;
   z = (z ^ (z >> 27u)) * 0x94d049bb133111ebull;
   return z ^ (z >> 31u);
 }
 
-inline void jmp(xoshiro256starstar &generator, std::uint64_t (&state)[4],
-                const std::uint64_t (&jump_table)[4]) {
+constexpr inline void jmp(xoshiro256starstar &generator,
+                          std::uint64_t (&state)[4],
+                          const std::uint64_t (&jump_table)[4]) noexcept {
   std::uint64_t temp[4]{};
   for (auto jump_value : jump_table) {
     for (unsigned b = 0; b != 64u; ++b) {
@@ -77,7 +79,7 @@ inline void jmp(xoshiro256starstar &generator, std::uint64_t (&state)[4],
 }
 } // namespace detail
 
-inline constexpr std::uint64_t xoshiro256starstar::operator()() {
+constexpr inline std::uint64_t xoshiro256starstar::operator()() noexcept {
   // -- xoshiro256** --
   const std::uint64_t result = detail::rotl(m_state[1] * 5, 7) * 9;
   const std::uint64_t temp = m_state[1] << 17u;
@@ -90,45 +92,57 @@ inline constexpr std::uint64_t xoshiro256starstar::operator()() {
   return result;
 }
 
-inline xoshiro256starstar::xoshiro256starstar(std::uint64_t seed0,
-                                              std::uint64_t seed1,
-                                              std::uint64_t seed2,
-                                              std::uint64_t seed3) {
+constexpr inline xoshiro256starstar::xoshiro256starstar(
+    std::uint64_t seed0, std::uint64_t seed1, std::uint64_t seed2,
+    std::uint64_t seed3) noexcept {
   m_state[0] = seed0;
   m_state[1] = seed1;
   m_state[2] = seed2;
   m_state[3] = seed3;
 }
 
-inline xoshiro256starstar::xoshiro256starstar(std::uint64_t seed) {
+constexpr inline xoshiro256starstar::xoshiro256starstar(
+    std::uint64_t seed) noexcept {
   for (auto &x : m_state) {
     x = detail::splitmix64(seed);
+  }
+}
+
+namespace detail {
+template <typename T>
+constexpr inline std::uint64_t generate_uint64(T &generator) {
+  using result_type = typename T::result_type;
+  static_assert(std::has_unique_object_representations<result_type>::value);
+  if constexpr (sizeof(result_type) >= sizeof(std::uint64_t)) {
+    return std::uint64_t{generator()};
+  } else {
+    constexpr auto sz = sizeof(result_type);
+    constexpr auto calls = (sizeof(std::uint64_t) + sz - 1) / sz;
+    std::uint64_t result{};
+    for (std::size_t i = 0; i != calls; ++i) {
+      result = (result << (sz * CHAR_BIT)) | generator();
+    }
+    return result;
+  }
+}
+} // namespace detail
+
+template <typename T>
+constexpr inline xoshiro256starstar::xoshiro256starstar(
+    seed_from_urbg_t, T &&other_urbg) noexcept {
+  for (auto &value : m_state) {
+    value = detail::generate_uint64(other_urbg);
   }
 }
 
 inline xoshiro256starstar::xoshiro256starstar()
     : xoshiro256starstar(seed_from_urbg, std::random_device{}) {}
 
-template <typename T>
-inline xoshiro256starstar::xoshiro256starstar(seed_from_urbg_t,
-                                              T &&other_urbg) requires
-    std::uniform_random_bit_generator<std::remove_cvref_t<T>> {
-
-  using other_result_type = typename std::remove_cvref_t<T>::result_type;
-  constexpr auto bytes_per_call = sizeof(other_result_type);
-  constexpr auto calls = (sizeof m_state + bytes_per_call - 1) / bytes_per_call;
-  other_result_type seed[calls];
-  for (auto &value : seed) {
-    value = other_urbg();
-  }
-  std::memcpy(&m_state, &seed, sizeof m_state);
-}
-
 // This is the jump function for the generator. It is equivalent to 2^128
 // calls to operator()(); it can be used to generate 2^128 non-overlapping
 // subsequences for parallel computations.
-inline xoshiro256starstar xoshiro256starstar::jump() {
-  static const std::uint64_t jump_table[] = {
+constexpr inline xoshiro256starstar xoshiro256starstar::jump() noexcept {
+  constexpr std::uint64_t jump_table[] = {
       0x180ec6d33cfd0abaull,
       0xd5a61266f0c9392cull,
       0xa9582618e03fc9aaull,
@@ -143,8 +157,8 @@ inline xoshiro256starstar xoshiro256starstar::jump() {
 // calls to operator()(); it can be used to generate 2^64 starting points, from
 // each of which jump() will generate 2^64 non-overlapping subsequences for
 // parallel distributed computations.
-inline xoshiro256starstar xoshiro256starstar::long_jump() {
-  static const std::uint64_t long_jump_table[] = {
+constexpr inline xoshiro256starstar xoshiro256starstar::long_jump() noexcept {
+  constexpr std::uint64_t long_jump_table[] = {
       0x76e15d3efefdcbbfull,
       0xc5004e441c522fb3ull,
       0x77710069854ee241ull,

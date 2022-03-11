@@ -6,7 +6,7 @@
 
 #include "xoshiro256starstar/xoshiro256starstar.hpp"
 
-const std::array<uint64_t, 4> expected_sequences[]{
+constexpr std::array<std::array<uint64_t, 4>, 7> expected_sequences{{
     {
         13441579124568109284ull,
         16706691377286368614ull,
@@ -32,6 +32,12 @@ const std::array<uint64_t, 4> expected_sequences[]{
         12310398284360036637ull,
     },
     {
+        13441579124568109284ull,
+        16706691377286368614ull,
+        6044645330207567355ull,
+        1028949623841091013ull,
+    },
+    {
         17233280674010829842ull,
         2397106501455141870ull,
         4812098391647980233ull,
@@ -43,35 +49,19 @@ const std::array<uint64_t, 4> expected_sequences[]{
         12250510543705388769ull,
         15376822593055763089ull,
     },
-};
+}};
 
-auto sub_test(auto sequence_number, auto &&generator) {
-  static auto test_number = 0;
-  auto n = test_number++;
-  auto expected_sequence = expected_sequences[sequence_number];
-  decltype(expected_sequence) actual_sequence;
-
-  std::ranges::generate(actual_sequence, std::ref(generator));
-  auto ok = actual_sequence == expected_sequence;
-
-  if (!ok) {
-    std::cout << "Sub-test " << n << " (sequence " << sequence_number
-              << ")\nExpected {";
-    std::ranges::copy(expected_sequence,
-                      std::ostream_iterator<std::uint64_t>(std::cout, "ull, "));
-    std::cout << "}\nActual {";
-    std::ranges::copy(actual_sequence,
-                      std::ostream_iterator<std::uint64_t>(std::cout, "ull, "));
-    std::cout << "}\n";
-  }
-
-  return ok;
+constexpr auto generate_sequence(auto &&generator) noexcept {
+  return std::array{generator(), generator(), generator(), generator()};
 }
 
-int main() {
+constexpr auto generate_sequences(auto &&...generators) noexcept {
+  return std::array{generate_sequence(generators)...};
+}
+
+constexpr auto make_actual_test_sequences() noexcept {
   using urbg = xoshiro256starstar::xoshiro256starstar;
   using xoshiro256starstar::seed_from_urbg;
-  using xoshiro256starstar::state_byte_size;
 
   auto generator0 = urbg{
       0xdeadbeeffeedbadbull,
@@ -85,15 +75,35 @@ int main() {
   auto generator3 = urbg{seed_from_urbg, generator0};
   auto generator4 = generator0;
 
-  return !std::ranges::all_of(
-      std::array{
-          sub_test(0, generator0),
-          sub_test(1, generator1),
-          sub_test(2, generator2),
-          sub_test(3, generator3),
-          sub_test(0, generator4),
-          sub_test(4, generator4),
-          sub_test(5, urbg{0xdeadbeeffeedbadbull}),
-      },
-      [](auto ok) { return ok; });
+  return generate_sequences(generator0, generator1, generator2, generator3,
+                            generator4, generator4,
+                            urbg{0xdeadbeeffeedbadbull});
+}
+
+int main() {
+  // Output an unpredictable number from a default-constructed generator
+  // just to make sure it compiles
+  using urbg = xoshiro256starstar::xoshiro256starstar;
+  using xoshiro256starstar::seed_from_urbg;
+  urbg generator;
+  std::cout << "Unpredictable: " << generator() << "\n";
+
+  // By default the tests are run at compile time
+  if constexpr (true) {
+    static_assert(make_actual_test_sequences() == expected_sequences);
+    return 0;
+  }
+
+  // It can be useful to see the actual sequences if the tests fail
+  auto actual_test_sequences = make_actual_test_sequences();
+  bool ok = actual_test_sequences == expected_sequences;
+  if (!ok) {
+    for (const auto &sequence : actual_test_sequences) {
+      std::cout << "{";
+      std::ranges::copy(
+          sequence, std::ostream_iterator<std::uint64_t>(std::cout, "ull, "));
+      std::cout << "},\n";
+    }
+  }
+  return ok ? 0 : 1;
 }
