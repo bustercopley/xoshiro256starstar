@@ -51,11 +51,13 @@ constexpr std::array<std::array<uint64_t, 4>, 7> expected_sequences{{
     },
 }};
 
-constexpr auto generate_sequence(auto &&generator) noexcept {
+template <typename URBG>
+constexpr auto generate_sequence(URBG &&generator) noexcept {
   return std::array{generator(), generator(), generator(), generator()};
 }
 
-constexpr auto generate_sequences(auto &&...generators) noexcept {
+template <typename... URBGs>
+constexpr auto generate_sequences(URBGs &&...generators) noexcept {
   return std::array{generate_sequence(generators)...};
 }
 
@@ -88,11 +90,13 @@ int main() {
   urbg generator;
   std::cout << "Unpredictable: " << generator() << "\n";
 
-  // By default the tests are run at compile time
+  // By default the tests are run at compile time (except on g++ 9)
+#if !__clang__ && __GNUC__ >= 10
   if constexpr (true) {
     static_assert(make_actual_test_sequences() == expected_sequences);
     return 0;
   }
+#endif
 
   // It can be useful to see the actual sequences if the tests fail
   auto actual_test_sequences = make_actual_test_sequences();
@@ -100,8 +104,8 @@ int main() {
   if (!ok) {
     for (const auto &sequence : actual_test_sequences) {
       std::cout << "{";
-      std::ranges::copy(
-          sequence, std::ostream_iterator<std::uint64_t>(std::cout, "ull, "));
+      std::copy(std::begin(sequence), std::end(sequence),
+                std::ostream_iterator<std::uint64_t>(std::cout, "ull, "));
       std::cout << "},\n";
     }
   }

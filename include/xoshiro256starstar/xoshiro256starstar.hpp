@@ -94,19 +94,17 @@ constexpr inline std::uint64_t xoshiro256starstar::operator()() noexcept {
 
 constexpr inline xoshiro256starstar::xoshiro256starstar(
     std::uint64_t seed0, std::uint64_t seed1, std::uint64_t seed2,
-    std::uint64_t seed3) noexcept {
-  m_state[0] = seed0;
-  m_state[1] = seed1;
-  m_state[2] = seed2;
-  m_state[3] = seed3;
-}
+    std::uint64_t seed3) noexcept
+    : m_state{seed0, seed1, seed2, seed3} {}
 
 constexpr inline xoshiro256starstar::xoshiro256starstar(
-    std::uint64_t seed) noexcept {
-  for (auto &x : m_state) {
-    x = detail::splitmix64(seed);
-  }
-}
+    std::uint64_t seed) noexcept
+    : m_state{
+          detail::splitmix64(seed),
+          detail::splitmix64(seed),
+          detail::splitmix64(seed),
+          detail::splitmix64(seed),
+      } {}
 
 namespace detail {
 template <typename T>
@@ -128,12 +126,14 @@ constexpr inline std::uint64_t generate_uint64(T &generator) {
 } // namespace detail
 
 template <typename T>
-constexpr inline xoshiro256starstar::xoshiro256starstar(
-    seed_from_urbg_t, T &&other_urbg) noexcept {
-  for (auto &value : m_state) {
-    value = detail::generate_uint64(other_urbg);
-  }
-}
+constexpr inline xoshiro256starstar::xoshiro256starstar(seed_from_urbg_t,
+                                                        T &&other_urbg) noexcept
+    : m_state{
+          detail::generate_uint64(other_urbg),
+          detail::generate_uint64(other_urbg),
+          detail::generate_uint64(other_urbg),
+          detail::generate_uint64(other_urbg),
+      } {}
 
 inline xoshiro256starstar::xoshiro256starstar()
     : xoshiro256starstar(seed_from_urbg, std::random_device{}) {}
