@@ -8,6 +8,8 @@
 #include <limits>
 #include <random>
 
+// Interface
+
 namespace xoshiro256starstar {
 struct seed_from_urbg_t {};
 inline constexpr seed_from_urbg_t seed_from_urbg{};
@@ -44,6 +46,8 @@ private:
   std::uint64_t m_state[4];
 };
 
+// Implementation
+
 namespace detail {
 constexpr inline auto rotl(const std::uint64_t x, unsigned k) noexcept {
   return (x << k) | (x >> (64u - k));
@@ -54,6 +58,23 @@ constexpr inline auto splitmix64(std::uint64_t &x) noexcept {
   z = (z ^ (z >> 30u)) * 0xbf58476d1ce4e5b9ull;
   z = (z ^ (z >> 27u)) * 0x94d049bb133111ebull;
   return z ^ (z >> 31u);
+}
+
+template <typename T>
+constexpr inline std::uint64_t generate_uint64(T &generator) {
+  using result_type = typename T::result_type;
+  static_assert(std::has_unique_object_representations<result_type>::value);
+  if constexpr (sizeof(result_type) >= sizeof(std::uint64_t)) {
+    return std::uint64_t{generator()};
+  } else {
+    constexpr auto sz = sizeof(result_type);
+    constexpr auto calls = (sizeof(std::uint64_t) + sz - 1) / sz;
+    std::uint64_t result{};
+    for (std::size_t i = 0; i != calls; ++i) {
+      result = (result << (sz * CHAR_BIT)) | generator();
+    }
+    return result;
+  }
 }
 
 constexpr inline void jmp(xoshiro256starstar &generator,
@@ -105,25 +126,6 @@ constexpr inline xoshiro256starstar::xoshiro256starstar(
           detail::splitmix64(seed),
           detail::splitmix64(seed),
       } {}
-
-namespace detail {
-template <typename T>
-constexpr inline std::uint64_t generate_uint64(T &generator) {
-  using result_type = typename T::result_type;
-  static_assert(std::has_unique_object_representations<result_type>::value);
-  if constexpr (sizeof(result_type) >= sizeof(std::uint64_t)) {
-    return std::uint64_t{generator()};
-  } else {
-    constexpr auto sz = sizeof(result_type);
-    constexpr auto calls = (sizeof(std::uint64_t) + sz - 1) / sz;
-    std::uint64_t result{};
-    for (std::size_t i = 0; i != calls; ++i) {
-      result = (result << (sz * CHAR_BIT)) | generator();
-    }
-    return result;
-  }
-}
-} // namespace detail
 
 template <typename T>
 constexpr inline xoshiro256starstar::xoshiro256starstar(seed_from_urbg_t,
