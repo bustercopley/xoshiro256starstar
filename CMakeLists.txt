@@ -5,8 +5,8 @@ include(cmake/prelude.cmake)
 project(
     xoshiro256starstar
     VERSION 0.1.0
-    DESCRIPTION "Short description"
-    HOMEPAGE_URL "https://example.com/"
+    DESCRIPTION "C++20 std::uniform_random_bit_generator using xoshiro256**"
+    HOMEPAGE_URL "https://github.com/bustercopley/xoshiro256starstar"
     LANGUAGES NONE
 )
 
