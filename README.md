@@ -81,3 +81,4 @@ See the [CONTRIBUTING](CONTRIBUTING.md) document.
 # Licensing
 
 Distributed under the [Boost Software License, Version 1.0](http://boost.org/LICENSE_1_0.txt).
+

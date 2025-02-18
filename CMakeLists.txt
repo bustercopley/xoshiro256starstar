@@ -26,7 +26,7 @@ set_property(
 target_include_directories(
     xoshiro256starstar_xoshiro256starstar ${warning_guard}
     INTERFACE
-    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+    "\$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
 
 target_compile_features(xoshiro256starstar_xoshiro256starstar INTERFACE cxx_std_20)
